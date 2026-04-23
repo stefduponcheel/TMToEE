@@ -1,0 +1,8 @@
+**/__pycache__/
+**/__init__.py
+*.root
+*.log
+**/crab_*
+**/__pycache__/
+**/condor_logs
+**/tmp
