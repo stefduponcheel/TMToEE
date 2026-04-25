@@ -9,7 +9,7 @@ year=2022
 outdir="/store/user/sduponch/PhD/TMToEE/${mode}/${ver}/Simulation"
 
 cmsDriver.py "Configuration/GenProduction/python/${mode}_fragment_cff.py" \
-    --python_filename "${step}_${mode}_cfg_test.py" \
+    --python_filename "${step}_${mode}_cfg.py" \
     --eventcontent RAWSIM \
     --customise Configuration/DataProcessing/Utils.addMonitoring \
     --datatier GEN-SIM \
