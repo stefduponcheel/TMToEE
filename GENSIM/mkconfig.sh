@@ -1,10 +1,10 @@
 #!/bin/bash
 
 step="GENSIM"
-mode="etaToTMGamma"
+mode="DplusToPiplusTM"
 
 
-ver=20260423
+ver=20260515
 year=2022
 outdir="/store/user/sduponch/PhD/TMToEE/${mode}/${ver}/Simulation"
 
@@ -24,7 +24,7 @@ cmsDriver.py "Configuration/GenProduction/python/${mode}_fragment_cff.py" \
 
 REQUESTNAME="MC_${mode}_${year}_${ver}"
 UNITSPERJOB="500"
-TOTALUNITS="50000"
+TOTALUNITS="1500000"
 OUTPUTDATASETTAG="${year}"
 OUTLFNDIRBASE=${outdir}
 

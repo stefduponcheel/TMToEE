@@ -2,7 +2,7 @@
 # using: 
 # Revision: 1.19 
 # Source: /local/reps/CMSSW/CMSSW/Configuration/Applications/python/ConfigBuilder.py,v 
-# with command line options: Configuration/GenProduction/python/etaToTMGamma_fragment_cff.py --python_filename GENSIM_etaToTMGamma_cfg.py --eventcontent RAWSIM --customise Configuration/DataProcessing/Utils.addMonitoring --datatier GEN-SIM --fileout output.root --conditions 124X_mcRun3_2022_realistic_v12 --beamspot Realistic25ns13p6TeVEarly2022Collision --step GEN,SIM --geometry DB:Extended --era Run3 --number 10 --no_exec --mc
+# with command line options: Configuration/GenProduction/python/etaToTMGamma_fragment_cff.py --python_filename GENSIM_etaToTMGamma_cfg.py --eventcontent RAWSIM --customise Configuration/DataProcessing/Utils.addMonitoring --datatier GEN-SIM --fileout output.root --conditions 124X_mcRun3_2022_realistic_v12 --beamspot Realistic25ns13p6TeVEarly2022Collision --step GEN,SIM --geometry DB:Extended --era Run3 --no_exec --mc
 import FWCore.ParameterSet.Config as cms
 
 from Configuration.Eras.Era_Run3_cff import Run3
@@ -26,7 +26,7 @@ process.load('Configuration.StandardSequences.EndOfProcess_cff')
 process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
 
 process.maxEvents = cms.untracked.PSet(
-    input = cms.untracked.int32(10),
+    input = cms.untracked.int32(1),
     output = cms.optional.untracked.allowed(cms.int32,cms.PSet)
 )
 
@@ -65,7 +65,7 @@ process.options = cms.untracked.PSet(
 
 # Production Info
 process.configurationMetadata = cms.untracked.PSet(
-    annotation = cms.untracked.string('Configuration/GenProduction/python/etaToTMGamma_fragment_cff.py nevts:10'),
+    annotation = cms.untracked.string('Configuration/GenProduction/python/etaToTMGamma_fragment_cff.py nevts:1'),
     name = cms.untracked.string('Applications'),
     version = cms.untracked.string('$Revision: 1.19 $')
 )
