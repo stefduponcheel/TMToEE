@@ -14,7 +14,7 @@ logfile="${OUTDIR}/log/run_${JOBID}.log"
 xrdfs maite.iihe.ac.be rm -f $outfile || true
 xrdfs maite.iihe.ac.be rm -f $logfile || true 
 
-tmplog="/afs/cern.ch/user/s/sduponch/private/PhD/TM/TMToEE/CMSSW_12_4_14_patch3/src/AODSIM/tmp/run_${MODE}_${JOBID}.log" #wrapper stdout
+# tmplog="/afs/cern.ch/user/s/sduponch/private/PhD/TM/TMToEE/CMSSW_12_4_14_patch3/src/AODSIM/tmp/run_${MODE}_${JOBID}.log" #wrapper stdout
 
 echo "Input file: ${infile}"
 echo "Output file: ${outfile}"
@@ -25,7 +25,7 @@ cd /afs/cern.ch/user/s/sduponch/private/PhD/TM/TMToEE/CMSSW_12_4_14_patch3/src/
 cmsenv
 voms-proxy-info -all -file $X509_USER_PROXY
 echo "Proxy valid"
-cmsRun "/afs/cern.ch/user/s/sduponch/private/PhD/TM/TMToEE/CMSSW_12_4_14_patch3/src/AODSIM/AODSIM_${MODE}_cfg.py" "root://maite.iihe.ac.be/${infile}" "root://maite.iihe.ac.be/${outfile}" &> ${tmplog}
+cmsRun "/afs/cern.ch/user/s/sduponch/private/PhD/TM/TMToEE/CMSSW_12_4_14_patch3/src/AODSIM/AODSIM_${MODE}_cfg.py" "root://maite.iihe.ac.be/${infile}" "root://maite.iihe.ac.be/${outfile}" 
 
-xrdcp -f ${tmplog} root://maite.iihe.ac.be/${logfile}
-#rm -f ${tmplog}
+# xrdcp -f ${tmplog} root://maite.iihe.ac.be/${logfile}
+# rm -f ${tmplog}
