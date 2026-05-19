@@ -1,35 +1,35 @@
 #!/bin/bash
+set -e
+
 MODE=$1
-INDIR=$2
+FILELIST=$2
 OUTDIR=$3
 JOBID=$(($4))
-#   voms-proxy-init -voms cms -rfc --valid 168:00 
+CMSSW_SRC=$5
+
 export X509_USER_PROXY="/afs/cern.ch/user/s/sduponch/tmp/x509up"
 
-infile="${INDIR}/output_${JOBID}.root"
 outfile="${OUTDIR}/output_${JOBID}.root"
-logfile="${OUTDIR}/log/run_${JOBID}.log"
-
-
-xrdfs maite.iihe.ac.be rm -f $outfile || true
-xrdfs maite.iihe.ac.be rm -f $logfile || true 
-
-tmplog="/afs/cern.ch/user/s/sduponch/private/PhD/TM/TMToEE/CMSSW_13_0_13/src/MINIAODSIM/tmp/job_${JOBID}/run_${JOBID}.log"
-
-echo "Input file: ${infile}"
-echo "Output file: ${outfile}"
-echo "Log file: ${logfile}" 
+cfg="${CMSSW_SRC}/MINIAODSIM/MINIAODSIM_${MODE}_cfg.py"
 
 source /cvmfs/cms.cern.ch/cmsset_default.sh
-cd /afs/cern.ch/user/s/sduponch/private/PhD/TM/TMToEE/CMSSW_13_0_13/src/
+cd "${CMSSW_SRC}"
 cmsenv
-voms-proxy-info -all -file $X509_USER_PROXY
- 
-cmsRun \
-    "/afs/cern.ch/user/s/sduponch/private/PhD/TM/TMToEE/CMSSW_13_0_13/src/MINIAODSIM/MINIAODSIM_${MODE}_cfg.py" \
-    "root://maite.iihe.ac.be/${infile}" \
-    "root://maite.iihe.ac.be/${outfile}" \
-    &> ${tmplog}
 
-#xrdcp -f ${tmplog} root://maite.iihe.ac.be/${logfile}
-#rm -f ${tmplog}
+INPUTFILES=$(paste -sd, "${FILELIST}")
+
+# Write locally, then stage out via xrdcp
+LOCALOUT="output_${JOBID}.root"
+
+xrdfs maite.iihe.ac.be rm "${outfile}" 2>/dev/null || true
+
+cmsRun "${cfg}" \
+    inputFiles="${INPUTFILES}" \
+    outputFile="${LOCALOUT}" \
+    maxEvents=-1
+
+echo "cmsRun done, staging out to ${outfile}"
+xrdcp -f "${LOCALOUT}" "root://maite.iihe.ac.be/${outfile}"
+rm -f "${LOCALOUT}"
+
+echo "Job ${JOBID} finished successfully"

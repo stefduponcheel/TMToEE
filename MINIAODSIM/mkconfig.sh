@@ -1,5 +1,8 @@
 #!/bin/bash
 
+#!/bin/bash
+set -e
+
 step="MINIAODSIM"
 mode=$1
 
@@ -16,8 +19,16 @@ cmsDriver.py \
     --fileout OUTPUTFILE \
     --number -1 \
     --no_exec \
-    --mc || exit $? ;
+    --mc
 
-sed -i "6iimport sys" "${step}_${mode}_cfg.py"
-sed -i "s|'INPUTFILE'|sys.argv[2]|g" "${step}_${mode}_cfg.py"
-sed -i "s|'OUTPUTFILE'|sys.argv[3]|g" "${step}_${mode}_cfg.py"
+cfg="${step}_${mode}_cfg.py"
+
+sed -i "/^import FWCore.ParameterSet.Config as cms/a\\
+from FWCore.ParameterSet.VarParsing import VarParsing\\
+options = VarParsing('analysis')\\
+options.parseArguments()" "${cfg}"
+
+sed -i "s|'INPUTFILE'|*options.inputFiles|g" "${cfg}"
+sed -i "s|'OUTPUTFILE'|options.outputFile|g" "${cfg}"
+
+sed -i "150iprocess.MINIAODSIMoutput.outputCommands.append('keep *_genParticles_*_*')" "${step}_${mode}_cfg.py"

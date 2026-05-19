@@ -3,8 +3,10 @@
 # Revision: 1.19 
 # Source: /local/reps/CMSSW/CMSSW/Configuration/Applications/python/ConfigBuilder.py,v 
 # with command line options: --python_filename MINIAODSIM_etaToTMGamma_cfg.py --eventcontent MINIAODSIM --customise Configuration/DataProcessing/Utils.addMonitoring --datatier MINIAODSIM --conditions 130X_mcRun3_2022_realistic_v5 --step PAT --geometry DB:Extended --era Run3,run3_miniAOD_12X --filein INPUTFILE --fileout OUTPUTFILE --number -1 --no_exec --mc
-import sys
 import FWCore.ParameterSet.Config as cms
+from FWCore.ParameterSet.VarParsing import VarParsing
+options = VarParsing('analysis')
+options.parseArguments()
 
 from Configuration.Eras.Era_Run3_cff import Run3
 from Configuration.Eras.Modifier_run3_miniAOD_12X_cff import run3_miniAOD_12X
@@ -31,7 +33,7 @@ process.maxEvents = cms.untracked.PSet(
 
 # Input source
 process.source = cms.Source("PoolSource",
-    fileNames = cms.untracked.vstring(sys.argv[2]),
+    fileNames = cms.untracked.vstring(*options.inputFiles),
     secondaryFileNames = cms.untracked.vstring()
 )
 
@@ -86,7 +88,7 @@ process.MINIAODSIMoutput = cms.OutputModule("PoolOutputModule",
     dropMetaData = cms.untracked.string('ALL'),
     eventAutoFlushCompressedSize = cms.untracked.int32(-900),
     fastCloning = cms.untracked.bool(False),
-    fileName = cms.untracked.string(sys.argv[3]),
+    fileName = cms.untracked.string(options.outputFile),
     outputCommands = process.MINIAODSIMEventContent.outputCommands,
     overrideBranchesSplitLevel = cms.untracked.VPSet(
         cms.untracked.PSet(
@@ -145,6 +147,7 @@ process.MINIAODSIMoutput = cms.OutputModule("PoolOutputModule",
     overrideInputFileSplitLevels = cms.untracked.bool(True),
     splitLevel = cms.untracked.int32(0)
 )
+process.MINIAODSIMoutput.outputCommands.append('keep *_genParticles_*_*')
 
 # Additional output definition
 
