@@ -2,4 +2,4 @@ figures*/
 venv
 */*.log
 */*.root
-
+*.png
