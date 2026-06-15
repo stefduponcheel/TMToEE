@@ -29,7 +29,7 @@
 #include "DataFormats/PatCandidates/interface/TriggerObjectStandAlone.h"
 #include "DataFormats/HepMCCandidate/interface/GenParticle.h"
 #include "DataFormats/Math/interface/deltaR.h"
-
+#include "TMath.h"
 #include "TTree.h"
 
 #include <vector>
@@ -265,7 +265,8 @@ void TrigObjNearest::analyze(const edm::Event& iEvent, const edm::EventSetup&) {
       const reco::GenParticle* best = nullptr;
       float bestDR = 1e9f;
       for (const auto* ge : genEles) {
-        float dR = reco::deltaR(obj.eta(), obj.phi(), ge->eta(), ge->phi());
+        // float dR = reco::deltaR(obj.eta(), obj.phi(), ge->eta(), ge->phi());
+        float dR = TMath::Sqrt(pow(obj.eta() - ge->eta(), 2.) + pow(obj.phi() - ge->phi(), 2.));
         if (dR < bestDR) { bestDR = dR; best = ge; }
       }
 

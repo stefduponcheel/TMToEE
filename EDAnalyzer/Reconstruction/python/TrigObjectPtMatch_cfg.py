@@ -7,7 +7,7 @@ options.register('genTag', 'genParticles',
                  "Gen particle collection")
 options.parseArguments()
 
-process = cms.Process("TRIGNEAR")
+process = cms.Process("TRIGPTMATCH")
 process.load("FWCore.MessageService.MessageLogger_cfi")
 process.MessageLogger.cerr.FwkReport.reportEvery = 500
 process.MessageLogger.cerr.threshold = "WARNING"
@@ -18,11 +18,11 @@ process.source = cms.Source("PoolSource",
     fileNames=cms.untracked.vstring(*options.inputFiles),
     skipBadFiles=cms.untracked.bool(True))
 process.TFileService = cms.Service("TFileService",
-    fileName=cms.string(options.outputFile if options.outputFile else "TrigNearest.root"))
+    fileName=cms.string(options.outputFile if options.outputFile else "TrigPtMatch.root"))
 
 double_ele_paths = [
-    "HLT_DoubleEle4_eta1p22_mMax6"
-    #, "HLT_DoubleEle4p5_eta1p22_mMax6",
+    "HLT_DoubleEle4_eta1p22_mMax6",
+    # "HLT_DoubleEle4p5_eta1p22_mMax6",
     # "HLT_DoubleEle5_eta1p22_mMax6", "HLT_DoubleEle5p5_eta1p22_mMax6",
     # "HLT_DoubleEle6_eta1p22_mMax6", "HLT_DoubleEle6p5_eta1p22_mMax6",
     # "HLT_DoubleEle7_eta1p22_mMax6", "HLT_DoubleEle7p5_eta1p22_mMax6",
@@ -31,8 +31,8 @@ double_ele_paths = [
     # "HLT_DoubleEle10_eta1p22_mMax6",
 ]
 
-process.trigObjNearest = cms.EDAnalyzer(
-    "TrigObjNearest",
+process.trigObjPtMatch = cms.EDAnalyzer(
+    "TrigObjPtMatch",
     genParticles = cms.InputTag(options.genTag),
     bits         = cms.InputTag("TriggerResults", "", "HLT"),
     objects      = cms.InputTag("slimmedPatTrigger"),
@@ -40,6 +40,7 @@ process.trigObjNearest = cms.EDAnalyzer(
     paths        = cms.vstring(*double_ele_paths),
     lastFilter   = cms.bool(False),
     l3Filter     = cms.bool(False),
+    coneSize     = cms.double(0.3),
 )
 
-process.p = cms.Path(process.trigObjNearest)
+process.p = cms.Path(process.trigObjPtMatch)
