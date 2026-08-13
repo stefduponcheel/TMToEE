@@ -5,6 +5,10 @@ options = VarParsing('analysis')
 options.register('genTag', 'genParticles',
                  VarParsing.multiplicity.singleton, VarParsing.varType.string,
                  "Gen particle collection")
+options.register('tmPdgId', 4900022,
+                 VarParsing.multiplicity.singleton, VarParsing.varType.int,
+                 "PDG id of TM (4900022 for the dark-photon stand-in channels, "
+                 "99033003 for ppToTMeeX's true-muonium state)")
 options.parseArguments()
 
 process = cms.Process("TRIGPTMATCH")
@@ -16,7 +20,12 @@ nev = options.maxEvents if options.maxEvents else -1
 process.maxEvents = cms.untracked.PSet(input=cms.untracked.int32(int(nev)))
 process.source = cms.Source("PoolSource",
     fileNames=cms.untracked.vstring(*options.inputFiles),
-    skipBadFiles=cms.untracked.bool(True))
+    skipBadFiles=cms.untracked.bool(True),
+    # Skimmed files are downstream of the MINIAODSIM merge (FILES_PER_JOB AODSIM
+    # files combined per job, never renumbered), so even reading just one of
+    # them internally repeats Run=1/Lumi=1/Event=1..N several times over --
+    # without this, only the first chunk's events would survive.
+    duplicateCheckMode=cms.untracked.string("noDuplicateCheck"))
 process.TFileService = cms.Service("TFileService",
     fileName=cms.string(options.outputFile if options.outputFile else "TrigPtMatch.root"))
 
@@ -36,7 +45,7 @@ process.trigObjPtMatch = cms.EDAnalyzer(
     genParticles = cms.InputTag(options.genTag),
     bits         = cms.InputTag("TriggerResults", "", "HLT"),
     objects      = cms.InputTag("slimmedPatTrigger"),
-    tmPdgId      = cms.int32(4900022),
+    tmPdgId      = cms.int32(options.tmPdgId),
     paths        = cms.vstring(*double_ele_paths),
     lastFilter   = cms.bool(False),
     l3Filter     = cms.bool(False),

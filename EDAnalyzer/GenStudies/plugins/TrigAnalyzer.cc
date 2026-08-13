@@ -23,6 +23,7 @@
 #include "DataFormats/Common/interface/Handle.h"
 #include "DataFormats/Common/interface/TriggerResults.h"
 #include "DataFormats/HepMCCandidate/interface/GenParticle.h"
+#include "HLTrigger/HLTcore/interface/HLTConfigProvider.h"
 
 #include "TTree.h"
 class TrigAnalyzer : public edm::one::EDAnalyzer<>
@@ -47,9 +48,23 @@ private:
 
 	std::map<TString, int> triggerCounts_;
 	std::map<TString, int> triggerTotal_;
+
+	// Prescale lookup. MC events carry no real prescale (the HLT logic
+	// itself is evaluated unprescaled); the actual prescale is a real-data
+	// -taking-period configuration choice, read here from the HLT menu's
+	// own embedded prescale table (HLTConfigProvider), not from the event.
+	// Which of the menu's several prescale columns ("sets") corresponds to
+	// real conditions of interest (e.g. a specific 2022 era) is an external
+	// question (brilcalc / confDB), not something derivable from the menu
+	// alone -- prescaleSet_ selects which column to read, defaulting to 0.
+	HLTConfigProvider hltConfig_;
+	unsigned int prescaleSet_;
+	bool hltConfigValid_;
 };
 
 TrigAnalyzer::TrigAnalyzer(const edm::ParameterSet &iConfig)
+	: prescaleSet_(iConfig.getUntrackedParameter<unsigned int>("prescaleSet", 0)),
+	  hltConfigValid_(false)
 {
 	edm::InputTag TriggerBitsTag_("TriggerResults", "", "HLT");
 	triggerToken_ = consumes<edm::TriggerResults>(TriggerBitsTag_);
@@ -64,7 +79,23 @@ void TrigAnalyzer::analyze(const edm::Event &iEvent, const edm::EventSetup &iSet
     nEventsProcessed_++;
 	edm::Handle<edm::TriggerResults> triggerHandle;
 	iEvent.getByToken(triggerToken_, triggerHandle);
-    
+
+	if (!hltConfig_.inited()) {
+		bool changed = true;
+		hltConfigValid_ = hltConfig_.init(iEvent.getRun(), iSetup, "HLT", changed);
+		if (hltConfigValid_) {
+			edm::LogPrint("TrigAnalyzer") << "\nHLT menu table: " << hltConfig_.tableName();
+			edm::LogPrint("TrigAnalyzer") << "Available prescale sets (" << hltConfig_.prescaleSize()
+				<< " total), using set " << prescaleSet_ << ":";
+			const auto &labels = hltConfig_.prescaleLabels();
+			for (size_t i = 0; i < labels.size(); i++)
+				edm::LogPrint("TrigAnalyzer") << "  [" << i << "] " << labels[i];
+		} else {
+			edm::LogPrint("TrigAnalyzer") << "\nWARNING: HLTConfigProvider::init failed -- "
+				"prescale/predicted columns will be unavailable.";
+		}
+	}
+
     const edm::TriggerNames &names = iEvent.triggerNames(*triggerHandle);
 	for (Size_t i = 0; i < names.size(); i++)
 	{
@@ -83,10 +114,13 @@ void TrigAnalyzer::endJob()
 	edm::LogPrint("TrigAnalyzer") << std::setw(60) << "Trigger Name"
 								  << std::setw(15) << "Fired"
 								  << std::setw(15) << "Total"
-								  << std::setw(15) << "Efficiency";
-	edm::LogPrint("TrigAnalyzer") << std::string(105, '-');
+								  << std::setw(15) << "Efficiency"
+								  << std::setw(15) << "Prescale"
+								  << std::setw(15) << "Predicted";
+	edm::LogPrint("TrigAnalyzer") << std::string(135, '-');
 
-	std::vector<std::pair<TString, double>> triggerEfficiencies;
+	struct Row { TString name; int fired; int total; double efficiency; double prescale; double predicted; bool havePrescale; };
+	std::vector<Row> rows;
 
 	for (const auto &entry : triggerCounts_)
 	{
@@ -95,25 +129,37 @@ void TrigAnalyzer::endJob()
 		int total = triggerTotal_[trigName];
 		double efficiency = (total > 0) ? (double)fired / total * 100.0 : 0.0;
 
-		triggerEfficiencies.push_back({trigName, efficiency});
+		double prescale = -1.0;
+		double predicted = 0.0;
+		bool havePrescale = false;
+		if (hltConfigValid_ && prescaleSet_ < hltConfig_.prescaleSize()) {
+			// prescaleValue throws if trigName is unknown to the menu (shouldn't
+			// happen here, since trigName came from this same event's menu).
+			prescale = hltConfig_.prescaleValue<double>(prescaleSet_, trigName.Data());
+			havePrescale = true;
+			// prescale == 0 means the path is fully masked off in this set --
+			// nothing gets recorded no matter how often the logic fires.
+			predicted = (prescale > 0) ? fired / prescale : 0.0;
+		}
+
+		rows.push_back({trigName, fired, total, efficiency, prescale, predicted, havePrescale});
 	}
 
-	std::sort(triggerEfficiencies.begin(), triggerEfficiencies.end(),
-			  [](const auto &a, const auto &b)
-			  { return a.second > b.second; });
+	// Rank by predicted (realistic) yield, not raw MC efficiency -- a path
+	// that fires often but is heavily prescaled records fewer real events
+	// than a less-efficient but lightly-prescaled one.
+	std::sort(rows.begin(), rows.end(),
+			  [](const Row &a, const Row &b) { return a.predicted > b.predicted; });
 
-	for (const auto &item : triggerEfficiencies)
+	for (const auto &r : rows)
 	{
-		const TString &trigName = item.first;
-		int fired = triggerCounts_[trigName];
-		int total = triggerTotal_[trigName];
-		double efficiency = item.second;
-
-		edm::LogPrint("TrigAnalyzer") << std::setw(80) << trigName
-									  << std::setw(15) << fired
-									  << std::setw(15) << total
+		edm::LogPrint("TrigAnalyzer") << std::setw(80) << r.name
+									  << std::setw(15) << r.fired
+									  << std::setw(15) << r.total
 									  << std::setw(14) << std::fixed << std::setprecision(2)
-									  << efficiency << "%";
+									  << r.efficiency << "%"
+									  << std::setw(15) << (r.havePrescale ? std::to_string((long long)r.prescale) : std::string("n/a"))
+									  << std::setw(15) << std::fixed << std::setprecision(2) << r.predicted;
 	}
 
 	edm::LogPrint("TrigAnalyzer") << "========================================\n";

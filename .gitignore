@@ -12,3 +12,5 @@
 **/tmp**/
 TriggerMatching*
 EstimationEvents/*
+**.progress
+sduponch.cc

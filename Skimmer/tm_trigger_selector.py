@@ -16,8 +16,13 @@ outputFile = sys.argv[2]
 process.source = cms.Source(
     "PoolSource",
     fileNames = cms.untracked.vstring(
-        "file:" + inputFile,
-    )
+        inputFile,  # already a full root:// URL from run_skimming*.sh
+    ),
+    # Each MiniAOD file is itself a merge of several AODSIM files (see
+    # MINIAODSIM's FILES_PER_JOB) that were never renumbered, so even a
+    # single file here internally repeats Run=1/Lumi=1/Event=1..N several
+    # times over -- without this, only the first chunk's events survive.
+    duplicateCheckMode = cms.untracked.string("noDuplicateCheck"),
 )
 
 # Trigger filter

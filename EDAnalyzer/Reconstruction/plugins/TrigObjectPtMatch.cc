@@ -198,11 +198,23 @@ void TrigObjPtMatch::analyze(const edm::Event& iEvent, const edm::EventSetup&) {
   }
   if (!anyFired) return;
 
-  // collect ALL gen particles (not just status==1 electrons)
-  // so we can classify by pdgId offline
+  // Only match against genuinely final-state particles. A trigger object
+  // corresponds to an actual reconstructed detector object, so it can never
+  // legitimately match an intermediate particle like TM itself (or its
+  // shower-recoil copies) -- TM decays before reaching the detector. Without
+  // this, TM can end up as the closest/best-pT gen match purely by kinematic
+  // coincidence, and firstRealAncestor() would then walk up to TM's *own*
+  // mother (a quark/gluon) instead of TM, silently making match_fromTM_ come
+  // out false even when the trigger really was caused by a TM-descended
+  // electron. Require both status()==1 (Pythia8's own final-state
+  // designation) and numberOfDaughters()==0 (the persisted record has no
+  // further decay listed) -- they should normally agree, but combining them
+  // guards against edge cases where they might not (e.g. if genTag ever
+  // points at a pruned collection instead of our full, unpruned one).
   std::vector<const reco::GenParticle*> genParts;
-  for (const auto& gp : *genHandle)
-    genParts.push_back(&gp);
+  for (const auto& gp : *genHandle) {
+    if (gp.status() == 1) genParts.push_back(&gp);
+  }
 
   if (genParts.empty()) return;
 

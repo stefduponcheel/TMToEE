@@ -4,12 +4,19 @@ import argparse
 import subprocess
 
 MODES = {
-    #"etaToTMGamma":     {"version": "20260508", "year": "2022", "nfiles": 1},
-    "B0ToKstarTM":      {"version": "20260509", "year": "2022", "nfiles": 1400},
-    "BplusToKplusTM":   {"version": "20260509", "year": "2022", "nfiles": 1400},
-    "omegaToTMPi0":     {"version": "20260509", "year": "2022", "nfiles": 3000},
-    "DplusToPiplusTM":  {"version": "20260515", "year": "2022", "nfiles": 3000},
+    # "etaToTMGamma":     {"version": "20260508", "year": "2022", "nfiles": 1},
+    # "B0ToKstarTM":      {"version": "20260509", "year": "2022", "nfiles": 1400},
+    # "BplusToKplusTM":   {"version": "20260509", "year": "2022", "nfiles": 1400},
+    # "omegaToTMPi0":     {"version": "20260509", "year": "2022", "nfiles": 3000},
+    # "DplusToPiplusTM":  {"version": "20260515", "year": "2022", "nfiles": 3000},
+    "ppToTMeeX": {"version": "20260810", "year": "2022", "nfiles": 500},
+    "ppToTMmumuX": {"version": "20260812", "year": "2022", "nfiles": 500},
 }
+
+# Modes whose AODSIM lives on EOS (condor-produced) rather than IIHE
+# (CRAB-produced) -- these get routed through a dedicated run script that
+# passes storage=eos to TrigAnalyzer_cfg.py.
+EOS_MODES = {"ppToTMeeX", "ppToTMmumuX"}
 
 
 def submit_job(mode):
@@ -22,10 +29,11 @@ def submit_job(mode):
     os.makedirs(tmpdir, exist_ok=True)
 
     cfg = MODES[mode]
+    run_script = "run_ppToTMeeX.sh" if mode in EOS_MODES else "run.sh"
 
     submit_description = f"""
 executable = /bin/bash
-arguments  = "{here}/run.sh {mode} {cfg['version']} {cfg['year']} {cfg['nfiles']}"
+arguments  = "{here}/{run_script} {mode} {cfg['version']} {cfg['year']} {cfg['nfiles']}"
 log    = {tmpdir}/job.log
 output = {tmpdir}/job.out
 error  = {tmpdir}/job.err
@@ -33,10 +41,10 @@ JobBatchName = TrigEff_{mode}
 request_cpus = 1
 request_memory = 4G
 request_disk = 5G
-+JobFlavour = "tomorrow"
++JobFlavour = "longlunch"
 notify_user = stef.duponcheel@cern.ch
 notification = Always
-max_retries = 0
+max_retries = 2
 should_transfer_files = NO
 
 queue 1
