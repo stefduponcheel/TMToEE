@@ -1,0 +1,40 @@
+#!/bin/bash
+# Generates GENSIM_ppToTMmumuX_cfg.py, templated for condor job submission.
+# Same LHE file / process as ppToTMeeX (p p > mumu(1|3S1) j) -- only the
+# fragment differs (TM forced to decay to mu+ mu- instead of e+ e-), so we
+# reuse the exact same LHE input, just with a different fragment/mode name.
+#
+# Runtime usage: cmsRun GENSIM_ppToTMmumuX_cfg.py <skipEvents> <maxEvents> <outputFile>
+
+step="GENSIM"
+mode="ppToTMmumuX"
+# TM's mass has been bumped 0.21132 -> 0.213 GeV in both the kinematics (E
+# recomputed from unchanged px/py/pz) and the fragment's particle-database
+# declaration -- the original LHE sits right at the mu+mu- threshold, which
+# Pythia8 can't reliably decay through (see bump_TM_mass_lhe.py).
+lhefile="root://eosuser.cern.ch//eos/user/s/sduponch/PhD/ppToTMmumuX/LHE/pp_TT_X_13p6TeV_50kevts_massBumped.lhe"
+
+cmsDriver.py "Configuration/GenProduction/python/${mode}_fragment_cff.py" \
+    --filein "${lhefile}" \
+    --python_filename "${step}_${mode}_cfg.py" \
+    --eventcontent RAWSIM \
+    --customise Configuration/DataProcessing/Utils.addMonitoring \
+    --datatier GEN-SIM \
+    --fileout "OUTPUTFILE" \
+    --conditions 124X_mcRun3_2022_realistic_v12 \
+    --beamspot Realistic25ns13p6TeVEarly2022Collision \
+    --step GEN,SIM \
+    --geometry DB:Extended \
+    --era Run3 \
+    --no_exec \
+    --mc || exit $? ;
+
+sed -i "6iimport sys" "${step}_${mode}_cfg.py"
+sed -i "s|'OUTPUTFILE'|sys.argv[4]|g" "${step}_${mode}_cfg.py"
+
+cat >> "${step}_${mode}_cfg.py" << 'EOF'
+
+# Per-job event range (condor submission): <cfg> <skipEvents> <maxEvents> <outputFile>
+process.source.skipEvents = cms.untracked.uint32(int(sys.argv[2]))
+process.maxEvents.input = cms.untracked.int32(int(sys.argv[3]))
+EOF

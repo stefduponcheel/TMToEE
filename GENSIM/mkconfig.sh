@@ -1,10 +1,10 @@
 #!/bin/bash
 
 step="GENSIM"
-mode="DplusToPiplusTM"
+mode="etaToTMGamma"
 
 
-ver=20260515
+ver=20260517
 year=2022
 outdir="/store/user/sduponch/PhD/TMToEE/${mode}/${ver}/Simulation"
 
