@@ -8,13 +8,14 @@ plt.style.use(hep.style.CMS)
 
 FILES = {
     r"$\eta \to TM\gamma$":     "root://maite.iihe.ac.be//store/user/sduponch/PhD/TMToEE/etaToTMGamma/20260508/Analysis/Ntuples/2022/ntuple_eta_merged.root",
-    r"$B^{0} \to K^{*} TM$":    "root://maite.iihe.ac.be//store/user/sduponch/PhD/TMToEE/B0ToKstarTM/20260509/Analysis/Ntuples/2022/ntuple_B0_merged.root",
-    r"$B^{+} \to K^{+} TM$":    "root://maite.iihe.ac.be//store/user/sduponch/PhD/TMToEE/BplusToKplusTM/20260509/Analysis/Ntuples/2022/ntuple_Bplus_merged.root",
-    r"$\omega \to TM\pi^{0}$":  "root://maite.iihe.ac.be//store/user/sduponch/PhD/TMToEE/omegaToTMPi0/20260509/Analysis/Ntuples/2022/ntuple_Omega_merged.root",
-    r"$D^{+} \to \pi^{+} TM$":  "root://maite.iihe.ac.be//store/user/sduponch/PhD/TMToEE/DplusToPiplusTM/20260515/Analysis/Ntuples/2022/ntuple_Dplus_merged.root",
+    r"$pp \to TM + X$":         "root://eosuser.cern.ch//eos/user/s/sduponch/PhD/ppToTMeeX/Ntuples/2022/ntuple_ppToTMeeX_merged.root",
+    # r"$B^{0} \to K^{*} TM$":    "root://maite.iihe.ac.be//store/user/sduponch/PhD/TMToEE/B0ToKstarTM/20260509/Analysis/Ntuples/2022/ntuple_B0_merged.root",
+    # r"$B^{+} \to K^{+} TM$":    "root://maite.iihe.ac.be//store/user/sduponch/PhD/TMToEE/BplusToKplusTM/20260509/Analysis/Ntuples/2022/ntuple_Bplus_merged.root",
+    # r"$\omega \to TM\pi^{0}$":  "root://maite.iihe.ac.be//store/user/sduponch/PhD/TMToEE/omegaToTMPi0/20260509/Analysis/Ntuples/2022/ntuple_Omega_merged.root",
+    # r"$D^{+} \to \pi^{+} TM$":  "root://maite.iihe.ac.be//store/user/sduponch/PhD/TMToEE/DplusToPiplusTM/20260515/Analysis/Ntuples/2022/ntuple_Dplus_merged.root",
 }
 
-OUTDIR = "figures_efficiency"
+OUTDIR = "figures_efficiencyV2"
 os.makedirs(OUTDIR, exist_ok=True)
 
 ELE_PT_CUT = 1.0  # GeV
@@ -250,21 +251,76 @@ def print_both_gain_vs_eta(eff, ele_cut=ELE_PT_CUT):
     print("=" * 60)
 # ---------------------------------------------------------------------------
 
+
+# ---------------------------------------------------------------------------
+# HLT_DoubleEle*_eta1p22_mMax6 kinematic acceptance
+# ---------------------------------------------------------------------------
+# NOTE: |eta| < 1.22 is the supercluster-eta cut encoded in the trigger name
+# ("eta1p22"), per standard CMS HLT naming convention and the Egamma-HLT
+# sequence (SC eta is what's available at that point in HLT, before tracking).
+# I could not verify the literal value against the primary ConfDB/HLT menu
+# config directly. This function only checks the pT + eta kinematic legs of
+# the trigger -- it does NOT model the mMax6 dielectron mass window or any
+# HLT electron ID/isolation requirements, so it's a kinematic acceptance
+# estimate, not a full trigger emulation.
+
+def compute_trigger_kinematic_acceptance(data, pt_cut=4.0, eta_cut=1.22):
+    """Fraction of events where BOTH electrons pass pT > pt_cut AND |eta| < eta_cut."""
+    results = {}
+    for label, arrs in data.items():
+        pt1 = np.asarray(arrs["ele1_pt"])
+        pt2 = np.asarray(arrs["ele2_pt"])
+        eta1 = np.asarray(arrs["ele1_eta"])
+        eta2 = np.asarray(arrs["ele2_eta"])
+
+        mask = np.isfinite(pt1) & np.isfinite(pt2) & np.isfinite(eta1) & np.isfinite(eta2)
+        n = int(mask.sum())
+
+        pass1 = (pt1[mask] > pt_cut) & (np.abs(eta1[mask]) < eta_cut)
+        pass2 = (pt2[mask] > pt_cut) & (np.abs(eta2[mask]) < eta_cut)
+        pass_both = pass1 & pass2
+
+        f = float(pass_both.sum() / n) if n > 0 else 0.0
+        results[label] = {"n_total": len(arrs["ele1_pt"]), "n": n,
+                           "frac": f, "err": binom_err(f, n)}
+    return results
+
+
+def print_trigger_acceptance_table(acc, pt_cut=4.0, eta_cut=1.22):
+    print()
+    print("=" * 90)
+    print(f"Kinematic acceptance for HLT_DoubleEleX_eta1p22_mMax6-like selection "
+          f"(pT > {pt_cut:g} GeV, |eta| < {eta_cut:g}, both e)")
+    print(f"(mass window and HLT ID/isolation NOT modeled -- kinematics only)")
+    print("=" * 90)
+    print(f"{'Process':<28} {'N':>10}  {'accepted [%]':>20}")
+    print("-" * 90)
+    for label, r in acc.items():
+        print(f"{_plain(label):<28} {r['n_total']:>10d}  "
+              f"{100*r['frac']:>10.2f} +/- {100*r['err']:<5.2f}")
+    print("=" * 90)
+
+
 def main():
     data = load()
 
-    eff = compute_electron_efficiency(data)
-    print_efficiency_table(eff)
-    print_ratio_table(eff, key="both")
-    print_ratio_table(eff, key="ele2")
+    for cut in (1.0, 4.0):
+        eff = compute_electron_efficiency(data, ele_cut=cut)
+        print_efficiency_table(eff, ele_cut=cut)
+        print_ratio_table(eff, key="both", ele_cut=cut)
+        print_ratio_table(eff, key="ele2", ele_cut=cut)
+        plot_efficiency_bar(eff, ele_cut=cut, fname=f"electron_pt_gt_{cut:g}GeV_fraction")
+        print_both_gain_vs_eta(eff, ele_cut=cut)
 
-    plot_efficiency_bar(eff, fname=f"electron_pt_gt_{ELE_PT_CUT:g}GeV_fraction")
     for k in ("both", "ele2"):
         plot_efficiency_vs_cut(data, key=k, logy=False,
                                fname=f"electron_pt_fraction_vs_cut_{k}_lin")
         plot_efficiency_vs_cut(data, key=k, logy=True,
                                fname=f"electron_pt_fraction_vs_cut_{k}_log")
-    print_both_gain_vs_eta(eff)
+
+    acc = compute_trigger_kinematic_acceptance(data, pt_cut=4.0, eta_cut=1.22)
+    print_trigger_acceptance_table(acc, pt_cut=4.0, eta_cut=1.22)
+
     print(f"\nResults in {OUTDIR}/")
 
 

@@ -8,6 +8,7 @@ plt.style.use(hep.style.CMS)
 
 FILES = {
     r"$\eta \to TM\gamma$":     "root://maite.iihe.ac.be//store/user/sduponch/PhD/TMToEE/etaToTMGamma/20260508/Analysis/Ntuples/2022/ntuple_eta_merged.root",
+    r"$pp \to TM + X$":         "root://eosuser.cern.ch//eos/user/s/sduponch/PhD/ppToTMeeX/Ntuples/2022/ntuple_ppToTMeeX_merged.root",
     # r"$B^{0} \to K^{*} TM$":    "root://maite.iihe.ac.be//store/user/sduponch/PhD/TMToEE/B0ToKstarTM/20260509/Analysis/Ntuples/2022/ntuple_B0_merged.root",
     # r"$B^{+} \to K^{+} TM$":    "root://maite.iihe.ac.be//store/user/sduponch/PhD/TMToEE/BplusToKplusTM/20260509/Analysis/Ntuples/2022/ntuple_Bplus_merged.root",
     # r"$\omega \to TM\pi^{0}$":  "root://maite.iihe.ac.be//store/user/sduponch/PhD/TMToEE/omegaToTMPi0/20260509/Analysis/Ntuples/2022/ntuple_Omega_merged.root",
@@ -43,7 +44,7 @@ def save(fig, fname):
     plt.close(fig)
 
 
-def plot_overlay(data, branch, bins, xlabel, fname, logy=False, xlim=None):
+def plot_overlay(data, branch, bins, xlabel, fname, logy=False, xlim=None, normalize=False):
     fig, ax = plt.subplots(figsize=(12, 10))
 
     for label, arrs in data.items():
@@ -53,8 +54,8 @@ def plot_overlay(data, branch, bins, xlabel, fname, logy=False, xlim=None):
         vals = clean(arrs[branch])
         counts, edges = np.histogram(vals, bins=bins)
 
-            # if counts.sum() > 0:
-            #     counts = counts / counts.sum()
+        if normalize and counts.sum() > 0:
+            counts = counts / counts.sum()
 
         hep.histplot(counts, edges, ax=ax, histtype="step",
                      linewidth=3, label=label)
@@ -65,7 +66,10 @@ def plot_overlay(data, branch, bins, xlabel, fname, logy=False, xlim=None):
         ax.set_xlim(*xlim)
     if logy:
         ax.set_yscale("log")
-        ax.set_ylim(bottom=1,top= 1e6)
+        if normalize:
+            ax.set_ylim(bottom=1e-5)
+        else:
+            ax.set_ylim(bottom=1, top=1e6)
 
     ax.legend(frameon=False)
     hep.cms.label("Internal", data=False, year=2022, ax=ax, lumi=None, com=13.6)
@@ -74,7 +78,9 @@ def plot_overlay(data, branch, bins, xlabel, fname, logy=False, xlim=None):
 
 
 def plot_single_channel_particles(data, label, particles):
-    for branch, bins, xlabel, fname in particles:
+    for item in particles:
+        branch, bins, xlabel, fname = item[:4]
+        logy = item[4] if len(item) > 4 else False
         if branch not in data[label]:
             continue
         fig, ax = plt.subplots(figsize=(12, 10))
@@ -87,6 +93,8 @@ def plot_single_channel_particles(data, label, particles):
 
         ax.set_xlabel(xlabel)
         ax.set_ylabel("Entries")
+        if logy:
+            ax.set_yscale("log")
         ax.legend(frameon=False)
         hep.cms.label("Internal", data=False, year=2022, ax=ax, lumi=None, com=13.6)
         fig.tight_layout()
@@ -105,14 +113,14 @@ def plot_overlay_logx(data, branch, bins, xlabel, fname, logy=True, xlim=None):
         vals = vals[vals > 0]
         counts, edges = np.histogram(vals, bins=bins)
 
-        # if counts.sum() > 0:
-        #     counts = counts / counts.sum()
+        if counts.sum() > 0:
+            counts = counts / counts.sum()
 
         hep.histplot(counts, edges, ax=ax, histtype="step",
                      linewidth=3, label=label)
 
     ax.set_xlabel(xlabel)
-    # ax.set_ylabel("Normalized entries")
+    ax.set_ylabel("Normalized entries")
     ax.set_xscale("log")
     if xlim:
         ax.set_xlim(*xlim)
@@ -137,12 +145,12 @@ def main():
         # ("mom_phi", np.linspace(-3.2, 3.2, 65), r"Mother $\phi$", "common_mother_phi"),
 
         # # TM kinematics
-        # ("tm_pt",   np.linspace(0, 25, 200),     r"TM $p_{\mathrm{T}}$ [GeV]", "common_tm_pt"),
-        # ("tm_pt",   np.linspace(0, 25, 200),     r"TM $p_{\mathrm{T}}$ [GeV]", "common_tm_pt_log", True),
-        # ("tm_pt",   np.linspace(0, 1, 201),     r"TM $p_{\mathrm{T}}$ [GeV]", "common_tm_pt_zoom", False, (0, 1)),
-        # ("tm_eta",  np.linspace(-4, 4, 81),     r"TM $\eta$", "common_tm_eta"),
-        # ("tm_phi",  np.linspace(-3.2, 3.2, 65), r"TM $\phi$", "common_tm_phi"),
-        # ("tm_Lxyz", np.linspace(0, 100, 401),   r"TM $L_{xyz}$ [cm]", "common_tm_Lxyz", True),
+        ("tm_pt",   np.linspace(0, 25, 200),     r"TM $p_{\mathrm{T}}$ [GeV]", "common_tm_pt"),
+        ("tm_pt",   np.linspace(0, 25, 200),     r"TM $p_{\mathrm{T}}$ [GeV]", "common_tm_pt_log", True),
+        ("tm_pt",   np.linspace(0, 1, 201),     r"TM $p_{\mathrm{T}}$ [GeV]", "common_tm_pt_zoom", False, (0, 1)),
+        ("tm_eta",  np.linspace(-4, 4, 81),     r"TM $\eta$", "common_tm_eta"),
+        ("tm_phi",  np.linspace(-3.2, 3.2, 65), r"TM $\phi$", "common_tm_phi"),
+        ("tm_Lxyz", np.linspace(0, 100, 401),   r"TM $L_{xyz}$ [cm]", "common_tm_Lxyz", True),
 
         # # electron kinematics
         ("ele1_pt",  np.linspace(0, 25, 200),    r"$e_{1}$ $p_{\mathrm{T}}$ [GeV]", "common_ele1_pt", True),
@@ -159,6 +167,18 @@ def main():
 
     for item in common_plots:
         plot_overlay(data, *item)
+
+    plot_overlay(data, "tm_pt", np.linspace(0, 25, 200),
+                 r"TM $p_{\mathrm{T}}$ [GeV]", "common_tm_pt_normalized",
+                 normalize=True, logy=True)
+
+    plot_overlay(data, "ele1_pt", np.linspace(0, 25, 200),
+                 r"$e_{1}$ $p_{\mathrm{T}}$ [GeV]", "common_ele1_pt_normalized",
+                 normalize=True, logy=True)
+
+    plot_overlay(data, "ele2_pt", np.linspace(0, 25, 200),
+                 r"$e_{2}$ $p_{\mathrm{T}}$ [GeV]", "common_ele2_pt_normalized",
+                 normalize=True, logy=True)
 
     # particle_plots = {
     #     r"$B^{0} \to K^{*} TM$": [
@@ -190,6 +210,10 @@ def main():
 
     # for label, plots in particle_plots.items():
     #     plot_single_channel_particles(data, label, plots)
+
+    plot_single_channel_particles(data, r"$pp \to TM + X$", [
+        ("ele_dR", np.linspace(0, 2, 101), r"$\Delta R(e^{+}, e^{-})$", "ppToTMeeX_ele_dR", True),
+    ])
         
     # logx_pt_plots = [
     #     ("mom_pt",  np.logspace(-2.5, 2.3, 120), r"Mother $p_{\mathrm{T}}$ [GeV]", "common_mother_pt_logx"),

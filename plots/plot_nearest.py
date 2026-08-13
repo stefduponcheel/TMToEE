@@ -18,7 +18,7 @@ from collections import defaultdict, Counter
 # CMS style
 hep.style.use("CMS")
 
-OUTDIR = "TrigObjectMatching"
+OUTDIR = "TrigObjectMatchingBplus"
 os.makedirs(OUTDIR, exist_ok=True)
 
 # header used on every plot
